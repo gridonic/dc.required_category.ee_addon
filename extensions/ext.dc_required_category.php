@@ -56,11 +56,12 @@ class DC_Required_Category
 	{
 		global $DB;
 
-		// hooks array (Thanks to Leevi Graham for this nice idea)
+		// hooks array
 		$hooks = array(
 			'sessions_start'				=> 'save_weblog_settings',
 			'submit_new_entry_start'		=> 'check_post_for_category',
-			'show_full_control_panel_end'	=> 'edit_weblog_prefs'
+			'show_full_control_panel_end'	=> 'edit_weblog_prefs',
+			'weblog_standalone_insert_entry'  => 'check_saef_for_category'
 		);
 
 		foreach ($hooks as $hook => $method)
@@ -132,24 +133,40 @@ class DC_Required_Category
 	 */
 	function check_post_for_category() {
 
-		global $DB, $EE, $EXT, $LANG;
+		global $EE, $EXT, $LANG;
 		$LANG->fetch_language_file('dc_required_category');
 		
-		echo('<pre>');
-		print_r($_POST);
-		echo('</pre>');
-
-		// check if we have a weblog with a category group and if required category is set
-		$query = $DB->query("SELECT b.weblog_id, b.cat_group FROM exp_weblogs AS b INNER JOIN exp_dc_required_cat AS d ON b.weblog_id = d.weblog_id WHERE b.cat_group != '' AND d.weblog_id = '" . $DB->escape_str($_POST['weblog_id']) . "' AND d.require_cat = '1'");
-
+        if ($EE === NULL)
+        {
+            return;
+		}
 		// we have the right weblog which also has cat group assigned
-		if ($query->num_rows > 0 && empty($_POST['category']))
+		if ($this->_requires_category($_POST['weblog_id']) && empty($_POST['category']))
 		{
 			$EE->new_entry_form('preview', $LANG->line('error_empty'));
 			$EXT->end_script = TRUE;
 		}
 
 		return;
+	}
+	
+	/**
+	 * Checks whether the category is required during posting
+	 * or editing a weblog content through SAEF.
+	 *
+	 * @see		weblog_standalone_insert_entry hook
+	 * @since	Version 1.0.2
+	 */
+	function check_saef_for_category() {
+		global $LANG, $OUT;
+		
+		$LANG->fetch_language_file('dc_required_category');
+
+		// we have the right weblog which also has cat group assigned
+		if ($this->_requires_category($_POST['weblog_id']) && empty($_POST['category']))
+		{
+            return $OUT->show_user_error('general', $LANG->line('error_empty'));
+		}
 	}
 
 	/**
@@ -249,8 +266,13 @@ class DC_Required_Category
 	//  ========================================================================
 	//  Private Functions
 	//  ========================================================================
+	
+	/**
+	 * Sets internal preferences for a given weblog.
+	 *
+ 	 * @param   string $weblog_id A weblog id.
+	 */
 	function _set_preferences($weblog_id) {
-
 		global $DB;
 
 		$preferences = $DB->query("SELECT * FROM exp_dc_required_cat WHERE weblog_id='".$DB->escape_str($weblog_id)."'");
@@ -262,6 +284,21 @@ class DC_Required_Category
 
 		// set require category value
 		$this->require_cat = ($preferences->row['require_cat'] == 1) ? TRUE : FALSE;
+	}
+	
+	/**
+	 * Checks whether a weblog requires at least one category.
+	 *
+	 * @param   string $weblog_id A weblog id.
+	 * @return  boolean True if a weblog requires at least one category, false else.
+	 */
+	function _requires_category($weblog_id) {
+	    global $DB;
+	    
+   		// check if we have a weblog with a category group and if required category is set
+		$query = $DB->query("SELECT b.weblog_id, b.cat_group FROM exp_weblogs AS b INNER JOIN exp_dc_required_cat AS d ON b.weblog_id = d.weblog_id WHERE b.cat_group != '' AND d.weblog_id = '" . $DB->escape_str($weblog_id) . "' AND d.require_cat = '1'");
+		
+		return $query->num_rows > 0;
 	}
 
 }
