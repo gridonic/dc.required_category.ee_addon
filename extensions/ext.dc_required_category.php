@@ -30,7 +30,7 @@ class DC_Required_Category
 	var $settings		= array();
 
 	var $name			= 'Required Category Extension';
-	var $version		= '1.0.1';
+	var $version		= '1.0.2';
 	var $description	= 'Makes categories required for selected weblogs.';
 	var $settings_exist	= 'n';
 	var $docs_url		= 'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/';
