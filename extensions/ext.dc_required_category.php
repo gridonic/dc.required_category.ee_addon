@@ -32,7 +32,7 @@ class DC_Required_Category
 	var $settings		= array();
 
 	var $name			= 'Required Category Extension';
-	var $version		= '1.0.2';
+	var $version		= '1.0.3';
 	var $description	= 'Makes categories required for selected weblogs.';
 	var $settings_exist	= 'n';
 	var $docs_url		= 'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/';
@@ -41,6 +41,7 @@ class DC_Required_Category
 	//  Settings Variables
 	// --------------------------------
 	var $require_cat = FALSE;
+	var $single_cat = FALSE;
 
 	// -------------------------------
 	//  Constructor - Extensions use this for settings
@@ -60,10 +61,10 @@ class DC_Required_Category
 
 		// hooks array
 		$hooks = array(
-			'sessions_start'				=> 'save_weblog_settings',
-			'submit_new_entry_start'		=> 'check_post_for_category',
-			'show_full_control_panel_end'	=> 'edit_weblog_prefs',
-			'weblog_standalone_insert_entry'  => 'check_saef_for_category'
+			'sessions_start'					=> 'save_weblog_settings',
+			'submit_new_entry_start'			=> 'check_post_for_category',
+			'show_full_control_panel_end'		=> 'edit_weblog_prefs',
+			'weblog_standalone_insert_entry'  	=> 'check_saef_for_category'
 		);
 
 		foreach ($hooks as $hook => $method)
@@ -83,7 +84,7 @@ class DC_Required_Category
 		}
 
 		// add extension table
-		$sql[] = "CREATE TABLE `exp_dc_required_cat` (`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY, `weblog_id` INT NOT NULL, `require_cat` INT NOT NULL DEFAULT '0')";
+		$sql[] = "CREATE TABLE `exp_dc_required_cat` (`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY, `weblog_id` INT NOT NULL, `require_cat` INT NOT NULL DEFAULT '0', `single_cat` INT NOT NULL DEFAULT '0')";
 		$sql[] = 'ALTER TABLE `exp_dc_required_cat` ADD UNIQUE `WEBLOG_ID` ( `weblog_id` )';
 
 		// run all sql queries
@@ -102,9 +103,20 @@ class DC_Required_Category
 	{
 		global $DB;
 
+		//	=============================================
+		//	Is Current?
+		//	=============================================
 		if ($current == '' OR $current == $this->version)
 		{
 			return FALSE;
+		}
+		
+		//	=============================================
+		//	Update?
+		//	=============================================
+		if($current < '1.0.3')
+		{
+			$sql[] = "ALTER TABLE `exp_dc_required_cat` ADD `single_cat` INT NOT NULL DEFAULT '0'";
 		}
 
 		$sql[] = "UPDATE exp_extensions SET version = '" . $DB->escape_str($this->version) . "' WHERE class = '" . get_class($this) . "'";
@@ -142,13 +154,25 @@ class DC_Required_Category
         {
             return;
 		}
-		// we have the right weblog which also has cat group assigned
-		if ($this->_requires_category($_POST['weblog_id']) && empty($_POST['category']))
+		
+		//	=============================================
+		//	Set weblog preferences
+		//	=============================================
+		//  Only one query for all settings
+		$this->_set_preferences($_POST['weblog_id']);
+		
+		if($this->require_cat && empty($_POST['category']))
 		{
 			$EE->new_entry_form('preview', $LANG->line('error_empty'));
 			$EXT->end_script = TRUE;
 		}
-
+		else if($this->single_cat && sizeof($_POST['category']) > 1)
+		{
+			$EE->new_entry_form('preview', $LANG->line('error_single_cat'));
+		    $EXT->end_script = TRUE;
+		}
+		
+		// If no errors, just get out of here...
 		return;
 	}
 	
@@ -163,11 +187,21 @@ class DC_Required_Category
 		global $LANG, $OUT;
 		
 		$LANG->fetch_language_file('dc_required_category');
-
+		
+		//	=============================================
+		//	Set weblog preferences
+		//	=============================================
+		//  Only one query for all settings
+		$this->_set_preferences($_POST['weblog_id']);
+		
 		// we have the right weblog which also has cat group assigned
-		if ($this->_requires_category($_POST['weblog_id']) && empty($_POST['category']))
+		if($this->require_cat && empty($_POST['category']))
 		{
-            return $OUT->show_user_error('general', $LANG->line('error_empty'));
+			return $OUT->show_user_error('general', $LANG->line('error_empty'));
+		}
+		else if($this->single_cat && sizeof($_POST['category']) > 1)
+		{
+			return $OUT->show_user_error('general', $LANG->line('error_single_cat'));
 		}
 	}
 
@@ -227,11 +261,20 @@ class DC_Required_Category
 		$r .= '<td class="tableHeadingAlt" colspan="2" align="left">'.NBS.$LANG->line('heading_preferences').$DSP->td_c();
 		$r .= $DSP->tr_c();
 
+		// Requires a category? settings
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellOne', $DSP->qspan('defaultBold', $LANG->line('pref_categories')), '50%');
 		$r .= $DSP->table_qcell('tableCellOne',
 				$DSP->input_radio('dc_required_category', '1', $this->require_cat ? 1 : 0).$LANG->line('radio_yes').NBS.
 				$DSP->input_radio('dc_required_category', '0', !$this->require_cat ? 1 : 0).$LANG->line('radio_no'), '50%');
+		$r .= $DSP->tr_c();
+		
+		// Only one category settings
+		$r .= $DSP->tr();
+		$r .= $DSP->table_qcell('tableCellTwo', $DSP->qspan('defaultBold', $LANG->line('pref_category_single')), '50%');
+		$r .= $DSP->table_qcell('tableCellTwo',
+				$DSP->input_radio('dc_single_category', '1', $this->single_cat ? 1 : 0).$LANG->line('radio_yes').NBS.
+				$DSP->input_radio('dc_single_category', '0', !$this->single_cat ? 1 : 0).$LANG->line('radio_no'), '50%');
 		$r .= $DSP->tr_c();
 
 		$r.= $DSP->table_c();
@@ -252,15 +295,16 @@ class DC_Required_Category
 	 */
 	function save_weblog_settings() {
 
-	global $DB;
+		global $DB;
 
-		if (isset($_POST['weblog_id']) && isset($_POST['dc_required_category']))
+		if (isset($_POST['weblog_id']) && isset($_POST['dc_required_category']) && isset($_POST['dc_single_category']))
 		{
 			// insert new values or update existing ones
-			$DB->query("INSERT INTO exp_dc_required_cat VALUES('', '".$DB->escape_str($_POST['weblog_id'])."', '".$DB->escape_str($_POST['dc_required_category'])."') ON DUPLICATE KEY UPDATE `weblog_id`=values(`weblog_id`), require_cat=values(`require_cat`)");
+			$DB->query("INSERT INTO exp_dc_required_cat VALUES('', '".$DB->escape_str($_POST['weblog_id'])."', '".$DB->escape_str($_POST['dc_required_category'])."', '".$DB->escape_str($_POST['dc_single_category'])."') ON DUPLICATE KEY UPDATE `weblog_id`=values(`weblog_id`), `require_cat`=values(`require_cat`), `single_cat`=values(`single_cat`)");
 
 			// unset so we don't get any errors on "update" on the admin page
 			unset($_POST['dc_required_category']);
+			unset($_POST['dc_single_category']);
 		}
 	}
 
@@ -273,6 +317,7 @@ class DC_Required_Category
 	 * Sets internal preferences for a given weblog.
 	 *
  	 * @param   string $weblog_id A weblog id.
+ 	 * @since	Version 1.0.0
 	 */
 	function _set_preferences($weblog_id) {
 		global $DB;
@@ -286,23 +331,10 @@ class DC_Required_Category
 
 		// set require category value
 		$this->require_cat = ($preferences->row['require_cat'] == 1) ? TRUE : FALSE;
-	}
-	
-	/**
-	 * Checks whether a weblog requires at least one category.
-	 *
-	 * @param   string $weblog_id A weblog id.
-	 * @return  boolean True if a weblog requires at least one category, false else.
-	 */
-	function _requires_category($weblog_id) {
-	    global $DB;
-	    
-   		// check if we have a weblog with a category group and if required category is set
-		$query = $DB->query("SELECT b.weblog_id, b.cat_group FROM exp_weblogs AS b INNER JOIN exp_dc_required_cat AS d ON b.weblog_id = d.weblog_id WHERE b.cat_group != '' AND d.weblog_id = '" . $DB->escape_str($weblog_id) . "' AND d.require_cat = '1'");
 		
-		return $query->num_rows > 0;
+		// set category limit value
+		$this->single_cat = ($preferences->row['single_cat'] == 1) ? TRUE : FALSE;
 	}
-
 }
 //END CLASS
 ?>

@@ -28,6 +28,9 @@ $L = array(
 
 	'pref_categories' =>
 	'Posts in this weblog require at least one category?',
+	
+	'pref_category_single' =>
+	'Limit to only <b>one category</b>',
 
 	'radio_yes'	=> 'Yes',
 	'radio_no'	=> 'No',
@@ -35,6 +38,9 @@ $L = array(
 	// ERRORS
 	'error_empty' =>
 	'Posts in this weblog must have <b>at least one category</b> associated with them.',
+	
+	'error_single_cat' =>
+	'Posts in this weblog cannot have <b>more than one category</b> associated with them.',
 
 	// END
 	''=>''
