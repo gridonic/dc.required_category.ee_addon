@@ -30,7 +30,7 @@ $L = array(
 	'Posts in this weblog require at least one category?',
 	
 	'pref_category_single' =>
-	'Limit to only <b>one category</b>',
+	'Limit to only one category',
 
 	'radio_yes'	=> 'Yes',
 	'radio_no'	=> 'No',
