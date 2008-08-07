@@ -29,8 +29,14 @@ $L = array(
 	'pref_categories' =>
 	'Posts in this weblog require at least one category?',
 	
-	'pref_category_single' =>
-	'Limit to only one category',
+	'pref_category_limit' =>
+	'Maximum number of categories',
+	
+	'pref_category_exact' =>
+	'Number of categories has to equal the maximum',
+	
+	'pref_no_limit' =>
+	'No limit',
 
 	'radio_yes'	=> 'Yes',
 	'radio_no'	=> 'No',
@@ -39,8 +45,17 @@ $L = array(
 	'error_empty' =>
 	'Posts in this weblog must have <b>at least one category</b> associated with them.',
 	
-	'error_single_cat' =>
-	'Posts in this weblog cannot have <b>more than one category</b> associated with them.',
+	'error_cat_single' =>
+	'Posts in this weblog cannot have <b>more than one</b> category associated with them.',
+	
+	'error_cat_limit' =>
+	'Posts in this weblog cannot have <b>more than %{limit}</b> categories associated with them.',
+	
+	'error_cat_exact' =>
+	'Posts in this weblog must have <b>exactly %{limit}</b> categories associated with them.',
+	
+	'error_cat_exact_single' =>
+	'Posts in this weblog must have <b>exactly one</b> category associated with them.',
 
 	// END
 	''=>''
