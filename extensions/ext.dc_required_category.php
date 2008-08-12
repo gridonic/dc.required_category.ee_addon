@@ -46,7 +46,7 @@ class DC_Required_Category
 	
 	// Internal magic constants
 	var $limit_total 	= 30;
-	var $debug          = TRUE;
+	var $debug          = FALSE;
 
 	// -------------------------------
 	//  Constructor - Extensions use this for settings
@@ -405,12 +405,12 @@ class DC_Required_Category
 		// check limits
 		if ($this->_has_category_limit())
 		{
-			if (sizeof($_POST['category']) > $this->cat_limit)
+			if (@sizeof($_POST['category']) > $this->cat_limit)
 			{
 				$errors[] = ($this->cat_limit == 1) ? $LANG->line('error_cat_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_limit'));
 			}
 			// check limit exact
-			if ($this->exact_cat && sizeof($_POST['category']) != $this->cat_limit)
+			if ($this->exact_cat && @sizeof($_POST['category']) != $this->cat_limit)
 			{
 				$errors[] = ($this->cat_limit == 1) ? $LANG->line('error_cat_exact_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_exact'));
 			}
