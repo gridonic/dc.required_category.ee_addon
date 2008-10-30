@@ -172,6 +172,9 @@ class DC_Required_Category
 		// spit out any errors
 		if (count($errors) > 0)
 		{
+			echo('<pre>');
+			print_r($_POST);
+			echo('</pre>');
 			$EE->new_entry_form('preview', '<ul><li>'.implode('</li><li>',array_filter($errors)).'</li></ul>');
 		    $EXT->end_script = TRUE;
 		}
