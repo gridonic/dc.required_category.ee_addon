@@ -26,38 +26,54 @@ if (!defined('EXT'))
 	exit('Invalid file request');
 }
 
+// define constants
+if (!defined('DC_REQ_CAT_VERSION'))
+{
+	define("DC_REQ_CAT_VERSION",	'1.0.5');	
+	define("DC_REQ_CAT_ID",			'DC Required Category');
+	define("DC_REQ_CAT_DOCS",		'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/');
+}
+
+/**
+ * Makes categories required for weblogs.
+ *
+ * @version		1.0.5
+ * @author		{@link http://designchuchi.ch} Designchuchi 
+ * @see			http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/
+ * @copyright	Copyright (c) 2008-2009 Designchuchi
+*/
 class DC_Required_Category
 {
 
 	var $settings		= array();
 
-	var $name			= 'Required Category Extension';
-	var $version		= '1.0.4';
+	var $name			= 'DC Required Category';
+	var $version		= DC_REQ_CAT_VERSION;
 	var $description	= 'Makes categories required for selected weblogs.';
-	var $settings_exist	= 'n';
-	var $docs_url		= 'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/';
+	var $settings_exist = 'y';
+	var $docs_url		= DC_REQ_CAT_DOCS;
 
 	// --------------------------------
-	//  Settings Variables
+	//	Settings Variables
 	// --------------------------------
-	var $require_cat 	= FALSE;
-	var $cat_limit 		= 0;
-	var $exact_cat      = FALSE;
+	var $require_cat	= FALSE;
+	var $cat_limit		= 0;
+	var $exact_cat		= FALSE;
 	
 	// Internal magic constants
-	var $limit_total 	= 30;
-	var $debug          = FALSE;
+	var $limit_total	= 30;
+	var $debug			= FALSE;
 
 	// -------------------------------
-	//  Constructor - Extensions use this for settings
+	//	Constructor - Extensions use this for settings
 	// -------------------------------
 	function DC_Required_Category($settings='')
 	{
-		$this->settings = $settings;
+		$this->settings = $this->_get_site_settings($settings);
 	}
 
 	// --------------------------------
-	//  Activate Extension
+	//	Activate Extension
 	// --------------------------------
 
 	function activate_extension()
@@ -69,7 +85,10 @@ class DC_Required_Category
 			'sessions_start'					=> 'save_weblog_settings',
 			'submit_new_entry_start'			=> 'check_post_for_category',
 			'show_full_control_panel_end'		=> 'edit_weblog_prefs',
-			'weblog_standalone_insert_entry'  	=> 'check_saef_for_category'
+			'weblog_standalone_insert_entry'	=> 'check_saef_for_category',
+			/* Lg Addon Updater Hooks */
+			'lg_addon_update_register_source'	 => 'dc_required_category_register_source',
+			'lg_addon_update_register_addon'	 => 'dc_required_category_register_addon'
 		);
 
 		foreach ($hooks as $hook => $method)
@@ -102,7 +121,7 @@ class DC_Required_Category
 	}
 
 	// --------------------------------
-	//  Update Extension
+	//	Update Extension
 	// --------------------------------
 	function update_extension($current = '')
 	{
@@ -131,6 +150,32 @@ class DC_Required_Category
 			$sql[] = "ALTER TABLE `exp_dc_required_cat` CHANGE `single_cat` `cat_limit` INT NOT NULL DEFAULT '0'";
 			$sql[] = "ALTER TABLE `exp_dc_required_cat` ADD `exact_cat` INT NOT NULL DEFAULT '0'";
 		}
+		
+		// LG Addon Updater hooks, added in version 1.0.5
+		if ($current < '1.0.5')
+		{
+			// hooks array
+			$hooks = array(
+				'lg_addon_update_register_source'	=> 'dc_required_category_register_source',
+				'lg_addon_update_register_addon'	=> 'dc_required_category_register_addon'
+			);
+
+			foreach ($hooks as $hook => $method)
+			{
+				$sql[] = $DB->insert_string('exp_extensions',
+					array(
+						'extension_id'	=> '',
+						'class'			=> get_class($this),
+						'method'		=> $method,
+						'hook'			=> $hook,
+						'settings'		=> '',
+						'priority'		=> 10,
+						'version'		=> $this->version,
+						'enabled'		=> 'y'
+					)
+				);
+			}
+		}
 
 		$sql[] = "UPDATE exp_extensions SET version = '" . $DB->escape_str($this->version) . "' WHERE class = '" . get_class($this) . "'";
 
@@ -142,7 +187,7 @@ class DC_Required_Category
 	}
 
 	// --------------------------------
-	//  Disable Extension
+	//	Disable Extension
 	// --------------------------------
 	function disable_extension()
 	{
@@ -176,7 +221,7 @@ class DC_Required_Category
 			print_r($_POST);
 			echo('</pre>');
 			$EE->new_entry_form('preview', '<ul><li>'.implode('</li><li>',array_filter($errors)).'</li></ul>');
-		    $EXT->end_script = TRUE;
+			$EXT->end_script = TRUE;
 		}
 		
 		// If no errors, just get out of here...
@@ -225,7 +270,7 @@ class DC_Required_Category
 		//	=============================================
 		//	Only Alter Weblog Preferences (on update too!)
 		//	=============================================
-		if($IN->GBL('M') != 'blog_admin' || ($IN->GBL('P') != 'blog_prefs' && $IN->GBL('P') !=  'update_preferences'))
+		if($IN->GBL('M') != 'blog_admin' || ($IN->GBL('P') != 'blog_prefs' && $IN->GBL('P') !=	'update_preferences'))
 		{
 			return $out;
 		}
@@ -263,12 +308,12 @@ class DC_Required_Category
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellOne', $DSP->qspan('defaultBold', $LANG->line('pref_categories')), '50%');
 		$r .= $DSP->table_qcell('tableCellOne',
-				$DSP->input_radio('dc_required_category', '1', $this->require_cat ? 1 : 0).$LANG->line('radio_yes').NBS.
-				$DSP->input_radio('dc_required_category', '0', !$this->require_cat ? 1 : 0).$LANG->line('radio_no'), '50%');
+				$DSP->input_radio('dc_required_category', '1', $this->require_cat ? 1 : 0).$LANG->line('yes').NBS.
+				$DSP->input_radio('dc_required_category', '0', !$this->require_cat ? 1 : 0).$LANG->line('no'), '50%');
 		$r .= $DSP->tr_c();
 		
 		//	category limit settings: Options
-		$options = 	$DSP->input_select_header('dc_category_limit', '', 1);
+		$options =	$DSP->input_select_header('dc_category_limit', '', 1);
 		
 		for ($i = 0; $i <= $this->limit_total; $i++)
 		{
@@ -283,15 +328,15 @@ class DC_Required_Category
 
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellTwo', $DSP->qspan('defaultBold', $LANG->line('pref_category_limit')), '50%');
-		$r .= $DSP->table_qcell('tableCellTwo',	$options, '50%');
+		$r .= $DSP->table_qcell('tableCellTwo', $options, '50%');
 		$r .= $DSP->tr_c();
 		
 		//	category number has to be exact?
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellOne', $DSP->qspan('defaultBold', $LANG->line('pref_category_exact')), '50%');
 		$r .= $DSP->table_qcell('tableCellOne',
-				$DSP->input_radio('dc_exact_category', '1', $this->exact_cat ? 1 : 0).$LANG->line('radio_yes').NBS.
-				$DSP->input_radio('dc_exact_category', '0', !$this->exact_cat ? 1 : 0).$LANG->line('radio_no'), '50%');
+				$DSP->input_radio('dc_exact_category', '1', $this->exact_cat ? 1 : 0).$LANG->line('yes').NBS.
+				$DSP->input_radio('dc_exact_category', '0', !$this->exact_cat ? 1 : 0).$LANG->line('no'), '50%');
 		$r .= $DSP->tr_c();
 
 		$r.= $DSP->table_c();
@@ -302,6 +347,101 @@ class DC_Required_Category
 		$out = @str_replace($table[0], $table[0].$r, $out);
 
 		return $out;
+	}
+	
+	/**
+	 * Settings Form
+	 *
+	 * Construct the custom settings form.
+	 *
+	 * Look and feel based on LG Addon Updater's settings form.
+	 *
+	 * @param  array   $current	  Current extension settings (not site-specific)
+	 * @see	   http://expressionengine.com/docs/development/extensions.html#settings
+	 * @since  version 1.0.0
+	 */
+	function settings_form($current)
+	{
+		$current = $this->_get_site_settings($current);
+		
+		global $DB, $DSP, $LANG, $IN;
+
+		// Breadcrumbs
+		$DSP->crumbline = TRUE;
+
+		$DSP->title = $LANG->line('extension_settings');
+		$DSP->crumb = $DSP->anchor(BASE.AMP.'C=admin'.AMP.'area=utilities', $LANG->line('utilities'))
+						. $DSP->crumb_item($DSP->anchor(BASE.AMP.'C=admin'.AMP.'M=utilities'.AMP.'P=extensions_manager', $LANG->line('extensions_manager')))
+						. $DSP->crumb_item($this->name);
+
+		$DSP->right_crumb($LANG->line('disable_extension'), BASE.AMP.'C=admin'.AMP.'M=utilities'.AMP.'P=toggle_extension_confirm'.AMP.'which=disable'.AMP.'name='.$IN->GBL('name'));
+
+		// Donations button
+		$DSP->body .= '<div style="float:right;">'
+						. '<a style="display:block; margin:-2px 10px 0 0; padding:5px 0 5px 70px; width:190px; height:15px; font-size:12px; line-height:15px;'
+						. ' background:url(http://brandon-kelly.com/images/shared/donations.png) no-repeat 0 0; color:#000; font-weight:bold;"'
+						. ' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2181794" target="_blank">'
+						. $LANG->line('donate')
+						. '</a>'
+						. '</div>';
+
+		// Form header
+		$DSP->body .= "<h1>{$this->name} <small>{$this->version}</small></h1>";
+		$DSP->body .= $DSP->form_open(
+							array(
+								'action'	=> 'C=admin'.AMP.'M=utilities'.AMP.'P=save_extension_settings',
+								'name'		=> 'settings_example',
+								'id'		=> 'settings_example'
+							 ),
+							array(
+								/* thanks Leevi, based on WHAT A M*F*KING B*TCH this was, forever grateful! */
+								'name'		=> strtolower(get_class($this))
+							)
+					  );
+
+		// Updates Setting
+		$lgau_query = $DB->query("SELECT class FROM exp_extensions WHERE class = 'Lg_addon_updater_ext' AND enabled = 'y' LIMIT 1");
+		$lgau_enabled = $lgau_query->num_rows ? TRUE : FALSE;
+		$check_for_extension_updates = ($lgau_enabled AND $current['check_for_updates'] == 'y') ? TRUE : FALSE;
+
+		$DSP->body .= $DSP->table_open(
+							array(
+								'class'		=> 'tableBorder',
+								'border'	=> '0',
+								'style'		=> 'margin-top:18px; width:100%'
+							)
+					  )
+
+						. $DSP->tr()
+						. $DSP->td('tableHeading', '', '2')
+						. $LANG->line("check_for_updates_title")
+						. $DSP->td_c()
+						. $DSP->tr_c()
+
+						. $DSP->tr()
+						. $DSP->td('', '', '2')
+						. '<div class="box" style="border-width:0 0 1px 0; margin:0; padding:10px 5px"><p>'.$LANG->line('check_for_updates_info').'</p></div>'
+						. $DSP->td_c()
+						. $DSP->tr_c()
+
+						. $DSP->tr()
+						. $DSP->td('tableCellOne', '60%')
+						. $DSP->qdiv('defaultBold', $LANG->line("check_for_updates_label"))
+						. $DSP->td_c()
+
+						. $DSP->td('tableCellOne')
+						. '<select name="check_for_updates"'.($lgau_enabled ? '' : ' disabled="disabled"').'>'
+						. $DSP->input_select_option('y', $LANG->line('yes'), ($current['check_for_updates'] == 'y' ? 'y' : ''))
+						. $DSP->input_select_option('n', $LANG->line('no'),	 ($current['check_for_updates'] != 'y' ? 'y' : ''))
+						. $DSP->input_select_footer()
+						. ($lgau_enabled ? '' : NBS.NBS.NBS.$LANG->line('check_for_updates_nolgau'))
+						. $DSP->td_c()
+						. $DSP->tr_c()
+
+						. $DSP->table_c();
+
+		// Close Form
+		$DSP->body .= $DSP->qdiv('itemWrapperTop', $DSP->input_submit()). $DSP->form_c();
 	}
 
 	/**
@@ -324,17 +464,35 @@ class DC_Required_Category
 			unset($_POST['dc_exact_category']);
 		}
 	}
+	
+	/**
+	 * Save Settings
+	 *
+	 * @since	version 1.0.5
+	 */
+	function save_settings()
+	{
+		global $DB, $PREFS;
+		
+		$settings = $this->_get_settings();
+		
+		// Save new settings
+		$settings[$PREFS->ini('site_id')] = $this->settings = array(
+			'check_for_updates' => $_POST['check_for_updates']
+		);
+		
+		$DB->query("UPDATE exp_extensions SET settings = '". addslashes(serialize($settings)) ."' WHERE class = '" . get_class($this) . "'");
+	}
 
-
-	//  ========================================================================
-	//  Private Functions
-	//  ========================================================================
+	//	========================================================================
+	//	Private Functions
+	//	========================================================================
 	
 	/**
 	 * Sets internal preferences for a given weblog.
 	 *
- 	 * @param   string $weblog_id A weblog id.
- 	 * @since	Version 1.0.0
+	 * @param	string $weblog_id A weblog id.
+	 * @since	Version 1.0.0
 	 */
 	function _set_preferences($weblog_id) {
 		global $DB;
@@ -382,9 +540,9 @@ class DC_Required_Category
 	 * to this function. Settings for a weblog are
 	 * populated in this function.
 	 *
-	 * @param   string	$weblog_id	A weblog id.
+	 * @param	string	$weblog_id	A weblog id.
 	 * @since	Version 1.0.4
-	 * @return  array   $errors     An array containing errors.
+	 * @return	array	$errors		An array containing errors.
 	 */
 	function _check_errors($weblog_id) {
 		global $LANG;
@@ -394,7 +552,7 @@ class DC_Required_Category
 		//	=============================================
 		//	Set weblog preferences
 		//	=============================================
-		//  Only one query for all settings
+		//	Only one query for all settings
 		$this->_set_preferences($weblog_id);
 
 		// error array
@@ -403,7 +561,7 @@ class DC_Required_Category
 		// category required
 		if ($this->require_cat && empty($_POST['category']))
 		{
-		    $errors[] = $LANG->line('error_empty');
+			$errors[] = $LANG->line('error_empty');
 		}
 		// check limits
 		if ($this->_has_category_limit())
@@ -421,6 +579,115 @@ class DC_Required_Category
 		
 		return $errors;
 	}
+	
+	//	========================================================================
+	//	Settings
+	//	========================================================================
+	
+	/**
+	 * Get All Settings
+	 *
+	 * @return array   All extension settings
+	 * @since  version 1.0.5
+	 */
+	function _get_settings()
+	{
+		global $DB;
+
+		$query = $DB->query("SELECT settings FROM exp_extensions WHERE class = '" . get_class($this) . "' AND settings != '' LIMIT 1");
+
+		return $query->num_rows ? unserialize($query->row['settings']) : array();
+	}
+	
+	/**
+	 * Get Default Settings
+	 * 
+	 * @return	array	Default settings for site
+	 * @since	1.0.5
+	 */
+	function _get_default_settings()
+	{
+		$settings = array(
+			'check_for_updates' => 'y'
+		);
+
+		return $settings;
+	}
+	
+	/**
+	 * Get Site Settings
+	 *
+	 * @param	array	$settings	Current extension settings (not site-specific)
+	 * @return	array				Site-specific extension settings
+	 * @since	version 1.0.5
+	 */
+	function _get_site_settings($settings = array())
+	{
+		global $PREFS;
+		
+		$site_settings = $this->_get_default_settings();
+		$site_id = $PREFS->ini('site_id');
+		
+		if (isset($settings[$site_id]))
+		{
+			$site_settings = array_merge($site_settings, $settings[$site_id]);
+		}
+
+		return $site_settings;
+	}
+	
+	//	========================================================================
+	//	LG Adddon Updater Hooks
+	//	========================================================================
+
+	/**
+	* Register a new Addon Source
+	*
+	* @param	array	$sources	The existing sources
+	* @return	array				Updated addons list.
+	* @since	version 1.0.5
+	*/
+	function dc_required_category_register_source($sources)
+	{
+		global $EXT;
+
+		// -- Check if we're not the only one using this hook
+		if($EXT->last_call !== FALSE)
+			$sources = $EXT->last_call;
+
+		// add a new source
+		if($this->settings['check_for_updates'] == 'y')
+		{
+			$sources[] = 'http://www.designchuchi.ch/versions.xml';
+		}
+
+		return $sources;
+	}
+
+	/**
+	* Register a new Addon
+	*
+	* @param	array	$addons		The existing sources
+	* @return	array				Updated addons list.
+	* @since	version 1.0.5
+	*/
+	function dc_required_category_register_addon($addons)
+	{
+		global $EXT;
+
+		// -- Check if we're not the only one using this hook
+		if ($EXT->last_call !== FALSE)
+			$addons = $EXT->last_call;
+
+		// add a new addon
+		// the key must match the id attribute in the source xml
+		// the value must be the addons current version
+		if($this->settings['check_for_updates'] == 'y')
+		{
+			$addons[DC_REQ_CAT_ID] = $this->version;
+		}
+		
+		return $addons;
+	}
 }
 //END CLASS
-?>
