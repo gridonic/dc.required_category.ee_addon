@@ -21,10 +21,7 @@ Purpose: Makes categories required for weblogs.
 =====================================================
 */
 
-if (!defined('EXT'))
-{
-	exit('Invalid file request');
-}
+if (!defined('EXT')) { exit('Invalid file request'); }
 
 // define constants
 if (!defined('DC_REQ_CAT_VERSION'))
