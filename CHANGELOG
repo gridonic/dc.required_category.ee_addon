@@ -4,7 +4,7 @@ Changelog
 1.0.0
 -----
 
-* Initial release
+* Initial release.
 
 1.0.1
 -----
@@ -25,6 +25,12 @@ Changelog
 1.0.4
 -----
 
-* Added category maximum feature
-* Added exact category number feature
-* Improved packaging by using README & CHANGELOG files
+* Added category maximum feature.
+* Added exact category number feature.
+* Improved packaging by using README & CHANGELOG files.
+
+1.0.5
+-----
+
+* Added support for LG Addon Updater.
+* Fixed a small bug where obsolete error messages were shown.

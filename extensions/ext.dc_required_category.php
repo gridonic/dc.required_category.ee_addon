@@ -214,9 +214,13 @@ class DC_Required_Category
 		// spit out any errors
 		if (count($errors) > 0)
 		{
-			echo('<pre>');
-			print_r($_POST);
-			echo('</pre>');
+			if ($this->debug)
+			{
+				echo('<pre>');
+				print_r($_POST);
+				echo('</pre>');				
+			}
+
 			$EE->new_entry_form('preview', '<ul><li>'.implode('</li><li>',array_filter($errors)).'</li></ul>');
 			$EXT->end_script = TRUE;
 		}
@@ -374,13 +378,14 @@ class DC_Required_Category
 		$DSP->right_crumb($LANG->line('disable_extension'), BASE.AMP.'C=admin'.AMP.'M=utilities'.AMP.'P=toggle_extension_confirm'.AMP.'which=disable'.AMP.'name='.$IN->GBL('name'));
 
 		// Donations button
-		$DSP->body .= '<div style="float:right;">'
-						. '<a style="display:block; margin:-2px 10px 0 0; padding:5px 0 5px 70px; width:190px; height:15px; font-size:12px; line-height:15px;'
-						. ' background:url(http://brandon-kelly.com/images/shared/donations.png) no-repeat 0 0; color:#000; font-weight:bold;"'
-						. ' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2181794" target="_blank">'
-						. $LANG->line('donate')
-						. '</a>'
-						. '</div>';
+	    $DSP->body .= '<div style="float:right;">'
+	                . '<a style="display:block; margin:0 10px 0 0; width:279px; height:27px; outline: none;'
+					. ' background: url(http://www.designchuchi.ch/images/shared/donate.gif) no-repeat 0 0; text-indent: -10000em;"'
+	                . ' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=3885671"'
+					. ' title="'. $LANG->line('donate_title') .'" target="_blank">'
+	                . $LANG->line('donate')
+	                . '</a>'
+	                . '</div>';
 
 		// Form header
 		$DSP->body .= "<h1>{$this->name} <small>{$this->version}</small></h1>";
@@ -558,19 +563,20 @@ class DC_Required_Category
 		// category required
 		if ($this->require_cat && empty($_POST['category']))
 		{
-			$errors[] = $LANG->line('error_empty');
+			$errors[0] = $LANG->line('error_empty');
 		}
 		// check limits
 		if ($this->_has_category_limit())
 		{
+			// we have more categories than permitted
 			if (@sizeof($_POST['category']) > $this->cat_limit)
 			{
-				$errors[] = ($this->cat_limit == 1) ? $LANG->line('error_cat_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_limit'));
+				$errors[0] = ($this->cat_limit == 1) ? $LANG->line('error_cat_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_limit'));
 			}
 			// check limit exact
 			if ($this->exact_cat && @sizeof($_POST['category']) != $this->cat_limit)
 			{
-				$errors[] = ($this->cat_limit == 1) ? $LANG->line('error_cat_exact_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_exact'));
+				$errors[0] = ($this->cat_limit == 1) ? $LANG->line('error_cat_exact_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_exact'));
 			}
 		}
 		
