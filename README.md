@@ -11,14 +11,14 @@ Installation
 
 2. 	Unpack the archive contents to your Desktop or to a location of
 	your choice on your hard-drive.
-	
-3. 	Copy the extensions/ext.dc_required_category.php file to your
-	/system/extensions directory of your EE installation
-	
-4. 	Copy the language/english/lang.dc_required_category.php file to
-	your /system/language/english directory	(or duplicate and modify
+
+3. 	Copy the `extensions/ext.dc_required_category.php` file to your
+	`/system/extensions` directory of your EE installation
+
+4. 	Copy the `language/english/lang.dc_required_category.php` file to
+	your `/system/language/english` directory	(or duplicate and modify
 	for any other language).
-	
+
 Activation & Settings
 =====================
 
@@ -27,10 +27,10 @@ steps to activate Required Category in your EE installation:
 
 1.	Log in to your EE control panel
 
-2.	Go to System Administration > Utilities > Extensions Manager and
+2.	Go to System `Administration > Utilities > Extensions Manager` and
 	enable extensions if not enabled already
-	
+
 3.	Enable Required Category extension
 
 The settings for this extension reside in the weblog preferences for each weblog
-Weblog Administration › Weblog Management › Edit Weblog
+`Weblog Administration › Weblog Management › Edit Weblog`
