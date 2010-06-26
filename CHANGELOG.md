@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0.6
+-----
+
+* Added settings for counting parent categories (http://expressionengine.com/forums/viewthread/81250/P18/#496350).
+
 1.0.5
 -----
 

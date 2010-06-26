@@ -29,7 +29,9 @@ $L = array(
 	'pref_category_limit'		=> 'Maximum number of categories',
 	'pref_category_exact'		=> 'Number of categories has to equal the maximum',
 	'pref_no_limit'				=> 'No limit',
-	
+	'pref_count_parents'		=> 'Count parents of categories?',
+	'pref_count_parents_desc'	=> 'Parents of selected child categories will be counted against the total number of categories selected.',
+
 	/* updates */
 	'check_for_updates_title'	=> 'Check for DC Required Category updates?',
 	'check_for_updates_info' 	=> 'DC Required Category can call home (<a href="http://www.designchuchi.ch/">http://www.designchuchi.ch</a>) and check to see if there is an extension update.',

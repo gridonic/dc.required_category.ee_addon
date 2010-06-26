@@ -3,7 +3,7 @@
 # This script creates symlinks from the local GIT repo into your EE install. It also copies some of the extension icons.
 # Original idea spinned off Leevi Graham, http://github.com/newism.  Thanks Leevi.
 
-dirname=`dirname "$0"`
+script_path=$(cd $(dirname $0); pwd)
 
 echo "
 You are about to create symlinks for DC Required Category
@@ -28,7 +28,7 @@ Enter your ee system folder name [ENTER]:"
 read ee_system_folder
 
 # extension
-ln -sv "$dirname"/extensions/ext.dc_required_category.php "$ee_path"/"$ee_system_folder"/extensions/ext.dc_required_category.php
+ln -sfv "$script_path"/extensions/ext.dc_required_category.php "$ee_path"/"$ee_system_folder"/extensions/ext.dc_required_category.php
 
 # language
-ln -sv "$dirname"/language/english/lang.dc_required_category.php "$ee_path"/"$ee_system_folder"/language/english/lang.dc_required_category.php
+ln -sfv "$script_path"/language/english/lang.dc_required_category.php "$ee_path"/"$ee_system_folder"/language/english/lang.dc_required_category.php

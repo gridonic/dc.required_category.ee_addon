@@ -26,7 +26,7 @@ if (!defined('EXT')) { exit('Invalid file request'); }
 // define constants
 if (!defined('DC_REQ_CAT_VERSION'))
 {
-	define("DC_REQ_CAT_VERSION",	'1.0.5');	
+	define("DC_REQ_CAT_VERSION",	'1.0.6');
 	define("DC_REQ_CAT_ID",			'DC Required Category');
 	define("DC_REQ_CAT_DOCS",		'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/');
 }
@@ -35,7 +35,7 @@ if (!defined('DC_REQ_CAT_VERSION'))
  * Makes categories required for weblogs.
  *
  * @version		1.0.5
- * @author		{@link http://designchuchi.ch} Designchuchi 
+ * @author		{@link http://designchuchi.ch} Designchuchi
  * @see			http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/
  * @copyright	Copyright (c) 2008-2009 Designchuchi
 */
@@ -56,7 +56,8 @@ class DC_Required_Category
 	var $require_cat	= FALSE;
 	var $cat_limit		= 0;
 	var $exact_cat		= FALSE;
-	
+	var $count_parents	= TRUE;
+
 	// Internal magic constants
 	var $limit_total	= 30;
 	var $debug			= FALSE;
@@ -105,7 +106,14 @@ class DC_Required_Category
 		}
 
 		// add extension table
-		$sql[] = "CREATE TABLE `exp_dc_required_cat` (`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY, `weblog_id` INT NOT NULL, `require_cat` INT NOT NULL DEFAULT '0', `cat_limit` INT NOT NULL DEFAULT '0', `exact_cat` INT NOT NULL DEFAULT '0')";
+		$sql[] = "CREATE TABLE `exp_dc_required_cat` (
+			`id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+			`weblog_id` INT NOT NULL,
+			`require_cat` INT NOT NULL DEFAULT '0',
+			`cat_limit` INT NOT NULL DEFAULT '0',
+			`exact_cat` INT NOT NULL DEFAULT '0',
+			`count_parents` INT NOT NULL DEFAULT '1')";
+
 		$sql[] = 'ALTER TABLE `exp_dc_required_cat` ADD UNIQUE `WEBLOG_ID` ( `weblog_id` )';
 
 		// run all sql queries
@@ -131,23 +139,24 @@ class DC_Required_Category
 		{
 			return FALSE;
 		}
-		
+
 		//	=============================================
 		//	Update?
 		//	=============================================
+
 		// Add single_cat limit column
 		if ($current < '1.0.3')
 		{
 			$sql[] = "ALTER TABLE `exp_dc_required_cat` ADD `single_cat` INT NOT NULL DEFAULT '0'";
 		}
-		
+
 		// Rename limit column, added in version 1.0.4
 		if ($current < '1.0.4')
 		{
 			$sql[] = "ALTER TABLE `exp_dc_required_cat` CHANGE `single_cat` `cat_limit` INT NOT NULL DEFAULT '0'";
 			$sql[] = "ALTER TABLE `exp_dc_required_cat` ADD `exact_cat` INT NOT NULL DEFAULT '0'";
 		}
-		
+
 		// LG Addon Updater hooks, added in version 1.0.5
 		if ($current < '1.0.5')
 		{
@@ -172,6 +181,12 @@ class DC_Required_Category
 					)
 				);
 			}
+		}
+
+		// Add count_parents column
+		if ($current < '1.0.6')
+		{
+			$sql[] = "ALTER TABLE `exp_dc_required_cat` ADD `count_parents` INT NOT NULL DEFAULT '1'";
 		}
 
 		$sql[] = "UPDATE exp_extensions SET version = '" . $DB->escape_str($this->version) . "' WHERE class = '" . get_class($this) . "'";
@@ -202,7 +217,7 @@ class DC_Required_Category
 	 */
 	function check_post_for_category() {
 		global $EE, $EXT;
-		
+
 		if ($EE === NULL)
 		{
 			return;
@@ -218,17 +233,17 @@ class DC_Required_Category
 			{
 				echo('<pre>');
 				print_r($_POST);
-				echo('</pre>');				
+				echo('</pre>');
 			}
 
 			$EE->new_entry_form('preview', '<ul><li>'.implode('</li><li>',array_filter($errors)).'</li></ul>');
 			$EXT->end_script = TRUE;
 		}
-		
+
 		// If no errors, just get out of here...
 		return;
 	}
-	
+
 	/**
 	 * Checks whether the category is required during posting
 	 * or editing a weblog content through SAEF.
@@ -238,7 +253,7 @@ class DC_Required_Category
 	 */
 	function check_saef_for_category() {
 		global $OUT;
-		
+
 		// Get weblog settings and check for errors in this post
 		$errors = $this->_check_errors($_POST['weblog_id']);
 
@@ -287,7 +302,7 @@ class DC_Required_Category
 		{
 			$weblog_id = FALSE;
 		}
-		
+
 		$this->_set_preferences($weblog_id);
 
 		//	=============================================
@@ -312,32 +327,40 @@ class DC_Required_Category
 				$DSP->input_radio('dc_required_category', '1', $this->require_cat ? 1 : 0).$LANG->line('yes').NBS.
 				$DSP->input_radio('dc_required_category', '0', !$this->require_cat ? 1 : 0).$LANG->line('no'), '50%');
 		$r .= $DSP->tr_c();
-		
+
 		//	category limit settings: Options
 		$options =	$DSP->input_select_header('dc_category_limit', '', 1);
-		
+
 		for ($i = 0; $i <= $this->limit_total; $i++)
 		{
 			$selected = ($this->cat_limit == $i) ? TRUE : FALSE;
-			
+
 			//	First value is a special string
 			$value = ($i == 0) ? $LANG->line('pref_no_limit') : $i;
 			$options .= $DSP->input_select_option($i, $value, $selected);
 		}
-		
+
 		$options .= $DSP->input_select_footer();
 
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellTwo', $DSP->qspan('defaultBold', $LANG->line('pref_category_limit')), '50%');
 		$r .= $DSP->table_qcell('tableCellTwo', $options, '50%');
 		$r .= $DSP->tr_c();
-		
+
 		//	category number has to be exact?
 		$r .= $DSP->tr();
 		$r .= $DSP->table_qcell('tableCellOne', $DSP->qspan('defaultBold', $LANG->line('pref_category_exact')), '50%');
 		$r .= $DSP->table_qcell('tableCellOne',
 				$DSP->input_radio('dc_exact_category', '1', $this->exact_cat ? 1 : 0).$LANG->line('yes').NBS.
 				$DSP->input_radio('dc_exact_category', '0', !$this->exact_cat ? 1 : 0).$LANG->line('no'), '50%');
+		$r .= $DSP->tr_c();
+
+		// count parent categories?
+		$r .= $DSP->tr();
+		$r .= $DSP->table_qcell('tableCellTwo', $DSP->qspan('defaultBold', $LANG->line('pref_count_parents')) . $DSP->div() . $LANG->line('pref_count_parents_desc') . $DSP->div_c(), '50%');
+		$r .= $DSP->table_qcell('tableCellTwo',
+		  $DSP->input_radio('dc_count_parents', '1', $this->count_parents ? 1 : 0).$LANG->line('yes').NBS.
+		  $DSP->input_radio('dc_count_parents', '0', !$this->count_parents ? 1 : 0).$LANG->line('no'), '50%');
 		$r .= $DSP->tr_c();
 
 		$r.= $DSP->table_c();
@@ -349,7 +372,7 @@ class DC_Required_Category
 
 		return $out;
 	}
-	
+
 	/**
 	 * Settings Form
 	 *
@@ -364,7 +387,7 @@ class DC_Required_Category
 	function settings_form($current)
 	{
 		$current = $this->_get_site_settings($current);
-		
+
 		global $DB, $DSP, $LANG, $IN;
 
 		// Breadcrumbs
@@ -455,18 +478,30 @@ class DC_Required_Category
 	function save_weblog_settings() {
 		global $DB;
 
-		if (isset($_POST['weblog_id']) && isset($_POST['dc_required_category']) && isset($_POST['dc_category_limit']) && isset($_POST['dc_exact_category']))
+		if (isset($_POST['weblog_id']) && isset($_POST['dc_required_category']) && isset($_POST['dc_category_limit']) && isset($_POST['dc_exact_category']) && isset($_POST['dc_count_parents']))
 		{
 			// insert new values or update existing ones
-			$DB->query("INSERT INTO exp_dc_required_cat VALUES('', '".$DB->escape_str($_POST['weblog_id'])."', '".$DB->escape_str($_POST['dc_required_category'])."', '".$DB->escape_str($_POST['dc_category_limit'])."', '".$DB->escape_str($_POST['dc_exact_category'])."') ON DUPLICATE KEY UPDATE `weblog_id`=values(`weblog_id`), `require_cat`=values(`require_cat`), `cat_limit`=values(`cat_limit`), `exact_cat`=values(`exact_cat`)");
+			$DB->query("INSERT INTO exp_dc_required_cat VALUES('', '"
+				.$DB->escape_str($_POST['weblog_id'])."', '"
+				.$DB->escape_str($_POST['dc_required_category'])."', '"
+				.$DB->escape_str($_POST['dc_category_limit'])."', '"
+				.$DB->escape_str($_POST['dc_exact_category'])."', '"
+				.$DB->escape_str($_POST['dc_count_parents'])."') ON DUPLICATE KEY UPDATE
+				`weblog_id` = values(`weblog_id`),
+				`require_cat` = values(`require_cat`),
+				`cat_limit` = values(`cat_limit`),
+				`exact_cat` = values(`exact_cat`),
+				`count_parents` = values(`count_parents`)"
+			);
 
 			// unset so we don't get any errors on "update" on the admin page
 			unset($_POST['dc_required_category']);
 			unset($_POST['dc_category_limit']);
 			unset($_POST['dc_exact_category']);
+			unset($_POST['dc_count_parents']);
 		}
 	}
-	
+
 	/**
 	 * Save Settings
 	 *
@@ -475,21 +510,21 @@ class DC_Required_Category
 	function save_settings()
 	{
 		global $DB, $PREFS;
-		
+
 		$settings = $this->_get_settings();
-		
+
 		// Save new settings
 		$settings[$PREFS->ini('site_id')] = $this->settings = array(
 			'check_for_updates' => $_POST['check_for_updates']
 		);
-		
-		$DB->query("UPDATE exp_extensions SET settings = '". addslashes(serialize($settings)) ."' WHERE class = '" . get_class($this) . "'");
+
+		$DB->query("UPDATE exp_extensions SET settings = '" . addslashes(serialize($settings)) . "' WHERE class = '" . get_class($this) . "'");
 	}
 
 	//	========================================================================
 	//	Private Functions
 	//	========================================================================
-	
+
 	/**
 	 * Sets internal preferences for a given weblog.
 	 *
@@ -499,7 +534,7 @@ class DC_Required_Category
 	function _set_preferences($weblog_id) {
 		global $DB;
 
-		$preferences = $DB->query("SELECT * FROM exp_dc_required_cat WHERE weblog_id='".$DB->escape_str($weblog_id)."'");
+		$preferences = $DB->query("SELECT * FROM exp_dc_required_cat WHERE weblog_id='" . $DB->escape_str($weblog_id) . "'");
 
 		if ($preferences->num_rows != 1)
 		{
@@ -512,12 +547,15 @@ class DC_Required_Category
 
 		//	set require category value
 		$this->require_cat = ($preferences->row['require_cat'] == 1) ? TRUE : FALSE;
-		
+
 		//	set category limit value
 		$this->cat_limit = $preferences->row['cat_limit'];
-		
+
 		//	set exact category value
 		$this->exact_cat = ($preferences->row['exact_cat'] == 1) ? TRUE : FALSE;
+
+		// set count parents value
+		$this->count_parents = ($preferences->row['count_parents'] == 1) ? TRUE : FALSE;
 
 		if ($this->debug)
 		{
@@ -526,7 +564,7 @@ class DC_Required_Category
 			echo("</pre>\n");
 		}
 	}
-	
+
 	/**
 	 * Checks whether there's a category limit set.
 	 *
@@ -535,7 +573,7 @@ class DC_Required_Category
 	function _has_category_limit() {
 		return $this->cat_limit > 0;
 	}
-	
+
 	/**
 	 * Checks for errors in a weblog post depending on the
 	 * settings for the given weblog and on the weblog_id passed
@@ -547,7 +585,8 @@ class DC_Required_Category
 	 * @return	array	$errors		An array containing errors.
 	 */
 	function _check_errors($weblog_id) {
-		global $LANG;
+
+		global $LANG, $PREFS, $DB;
 
 		$LANG->fetch_language_file('dc_required_category');
 
@@ -568,25 +607,44 @@ class DC_Required_Category
 		// check limits
 		if ($this->_has_category_limit())
 		{
+			$cat_count = @sizeof($_POST['category']);
+
+		   // the case parent categories should not be counted
+			if ( ! $this->count_parents)
+			{
+				$site_id = $PREFS->ini('site_id');
+
+				foreach ($_POST['category'] as $cat_id)
+				{
+					$sql = "SELECT cat_id, cat_name FROM exp_categories WHERE parent_id = '" . $DB->escape_str($cat_id) . "' AND site_id = '" . $DB->escape_str($site_id) . "'";
+					$query = $DB->query($sql);
+
+					if ($query->num_rows > 0)
+					{
+						$cat_count -= 1;
+					}
+				}
+			}
+
 			// we have more categories than permitted
-			if (@sizeof($_POST['category']) > $this->cat_limit)
+			if ($cat_count > $this->cat_limit)
 			{
 				$errors[0] = ($this->cat_limit == 1) ? $LANG->line('error_cat_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_limit'));
 			}
 			// check limit exact
-			if ($this->exact_cat && @sizeof($_POST['category']) != $this->cat_limit)
+			if ($this->exact_cat && ($cat_count != $this->cat_limit))
 			{
 				$errors[0] = ($this->cat_limit == 1) ? $LANG->line('error_cat_exact_single') : str_replace('%{limit}', $this->cat_limit, $LANG->line('error_cat_exact'));
 			}
 		}
-		
+
 		return $errors;
 	}
-	
+
 	//	========================================================================
 	//	Settings
 	//	========================================================================
-	
+
 	/**
 	 * Get All Settings
 	 *
@@ -601,10 +659,10 @@ class DC_Required_Category
 
 		return $query->num_rows ? unserialize($query->row['settings']) : array();
 	}
-	
+
 	/**
 	 * Get Default Settings
-	 * 
+	 *
 	 * @return	array	Default settings for site
 	 * @since	1.0.5
 	 */
@@ -616,7 +674,7 @@ class DC_Required_Category
 
 		return $settings;
 	}
-	
+
 	/**
 	 * Get Site Settings
 	 *
@@ -627,10 +685,10 @@ class DC_Required_Category
 	function _get_site_settings($settings = array())
 	{
 		global $PREFS;
-		
+
 		$site_settings = $this->_get_default_settings();
 		$site_id = $PREFS->ini('site_id');
-		
+
 		if (isset($settings[$site_id]))
 		{
 			$site_settings = array_merge($site_settings, $settings[$site_id]);
@@ -638,7 +696,7 @@ class DC_Required_Category
 
 		return $site_settings;
 	}
-	
+
 	//	========================================================================
 	//	LG Adddon Updater Hooks
 	//	========================================================================
@@ -689,7 +747,7 @@ class DC_Required_Category
 		{
 			$addons[DC_REQ_CAT_ID] = $this->version;
 		}
-		
+
 		return $addons;
 	}
 }
