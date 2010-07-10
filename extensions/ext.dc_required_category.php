@@ -515,7 +515,7 @@ class DC_Required_Category
 
 		// Save new settings
 		$settings[$PREFS->ini('site_id')] = $this->settings = array(
-			'check_for_updates' => $_POST['check_for_updates']
+			'check_for_updates' => isset($_POST['check_for_updates']) ? $_POST['check_for_updates'] : 'n',
 		);
 
 		$DB->query("UPDATE exp_extensions SET settings = '" . addslashes(serialize($settings)) . "' WHERE class = '" . get_class($this) . "'");
