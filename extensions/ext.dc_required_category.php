@@ -26,7 +26,7 @@ if (!defined('EXT')) { exit('Invalid file request'); }
 // define constants
 if (!defined('DC_REQ_CAT_VERSION'))
 {
-	define("DC_REQ_CAT_VERSION",	'1.0.6');
+	define("DC_REQ_CAT_VERSION",	'1.0.7');
 	define("DC_REQ_CAT_ID",			'DC Required Category');
 	define("DC_REQ_CAT_DOCS",		'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/');
 }

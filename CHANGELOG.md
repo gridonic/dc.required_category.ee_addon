@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0.7
+-----
+
+* Fixed a small bug when saving extension settings and LG Addon Updater is not installed.
+
 1.0.6
 -----
 
