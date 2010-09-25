@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0.8
+-----
+
+* Fixed a bug when saving entries with no categories selected raised an error in some cases.
+
 1.0.7
 -----
 

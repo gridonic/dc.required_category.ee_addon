@@ -26,18 +26,18 @@ if (!defined('EXT')) { exit('Invalid file request'); }
 // define constants
 if (!defined('DC_REQ_CAT_VERSION'))
 {
-	define("DC_REQ_CAT_VERSION",	'1.0.7');
+	define("DC_REQ_CAT_VERSION",	'1.0.8');
 	define("DC_REQ_CAT_ID",			'DC Required Category');
-	define("DC_REQ_CAT_DOCS",		'http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/');
+	define("DC_REQ_CAT_DOCS",		'http://github.com/designchuchi/dc.required_category.ee_addon/');
 }
 
 /**
  * Makes categories required for weblogs.
  *
- * @version		1.0.5
+ * @version		1.0.8
  * @author		{@link http://designchuchi.ch} Designchuchi
- * @see			http://www.designchuchi.ch/index.php/blog/comments/required-category-extension/
- * @copyright	Copyright (c) 2008-2009 Designchuchi
+ * @see			http://github.com/designchuchi/dc.required_category.ee_addon
+ * @copyright	Copyright (c) 2008 - today Designchuchi
 */
 class DC_Required_Category
 {
@@ -609,8 +609,8 @@ class DC_Required_Category
 		{
 			$cat_count = @sizeof($_POST['category']);
 
-		   // the case parent categories should not be counted
-			if ( ! $this->count_parents)
+			// the case parent categories should not be counted
+			if ( ! $this->count_parents && isset($_POST['category']))
 			{
 				$site_id = $PREFS->ini('site_id');
 
